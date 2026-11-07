@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- 문서 -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M36,26h26l12,12v44a2,2 0,0 1,-2 2H36a2,2 0,0 1,-2 -2V28a2,2 0,0 1,2 -2z"/>
+    <path android:fillColor="#BBD3EA" android:pathData="M62,26v12h12z"/>
+    <path android:fillColor="#2E75B6" android:pathData="M41,46h26v4H41zM41,55h26v4H41zM41,64h18v4H41z"/>
+</vector>

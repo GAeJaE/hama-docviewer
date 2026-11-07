@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>하마 문서뷰어</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="bar">
+    <button id="btnBack" class="icon" aria-label="뒤로" hidden>
+      <svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+    </button>
+    <div id="title">하마 문서뷰어</div>
+    <button id="btnOpen" class="icon" aria-label="파일 열기">
+      <svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/></svg>
+    </button>
+    <button id="btnMore" class="icon" aria-label="메뉴" hidden>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+    </button>
+  </header>
+
+  <div id="menu" hidden>
+    <button data-act="zoomIn">확대</button>
+    <button data-act="zoomOut">축소</button>
+    <button data-act="fit">화면 너비에 맞춤</button>
+    <button data-act="share">공유</button>
+    <button data-act="other">다른 앱으로 열기</button>
+    <button data-act="open">다른 파일 열기</button>
+  </div>
+
+  <main id="home">
+    <div class="hero">
+      <div class="logo">📄</div>
+      <h1>하마 문서뷰어</h1>
+      <p>한글·워드·엑셀·파워포인트·PDF 문서를 바로 열어 봅니다.<br>인터넷 연결 없이 기기 안에서만 처리됩니다.</p>
+      <button id="btnPick" class="primary">파일 열기</button>
+    </div>
+
+    <section class="card">
+      <h2>지원 형식</h2>
+      <div class="chips">
+        <span class="chip hwp">HWP</span><span class="chip hwp">HWPX</span>
+        <span class="chip doc">DOCX</span><span class="chip doc">DOC</span>
+        <span class="chip xls">XLSX</span><span class="chip xls">XLS</span><span class="chip xls">CSV</span>
+        <span class="chip ppt">PPTX</span><span class="chip ppt">PPT</span>
+        <span class="chip pdf">PDF</span><span class="chip etc">ODT·ODS·ODP</span><span class="chip etc">RTF·TXT</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>파일을 눌러서 바로 열기</h2>
+      <ol class="tip">
+        <li>파일 관리자(내 파일)나 카카오톡·메일에서 문서를 누르세요.</li>
+        <li>앱 선택 창에서 <b>하마 문서뷰어</b>를 고르고 <b>항상</b>을 누르면 다음부터 탭 한 번으로 열립니다.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="recentCard" hidden>
+      <h2>최근 문서 <button id="btnClearRecent" class="link">지우기</button></h2>
+      <ul id="recent"></ul>
+    </section>
+  </main>
+
+  <main id="viewer" hidden>
+    <div id="doc"></div>
+  </main>
+  <div id="status" hidden></div>
+  <nav id="sheetTabs" hidden></nav>
+
+  <script src="lib/vendor.js"></script>
+  <script src="legacy.js"></script>
+  <script src="hwpx.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
