@@ -53,23 +53,7 @@ class MainActivity : Activity() {
     private val assetLoader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .addPathHandler("/doc/", DocPathHandler())
             .build()
-    }
-
-    private inner class DocPathHandler : WebViewAssetLoader.PathHandler {
-        override fun handle(path: String): WebResourceResponse? {
-            val uri = currentUri ?: return null
-            return try {
-                val input = contentResolver.openInputStream(uri) ?: return null
-                WebResourceResponse("application/octet-stream", null, input).apply {
-                    responseHeaders = mapOf("Cache-Control" to "no-store")
-                }
-            } catch (e: Exception) {
-                WebResourceResponse("text/plain", "utf-8", 500, "Error",
-                    mapOf("Cache-Control" to "no-store"), "파일을 읽을 수 없습니다: ${e.message}".byteInputStream())
-            }
-        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -93,8 +77,13 @@ class MainActivity : Activity() {
         webView.addJavascriptInterface(Bridge(), "Android")
         webView.webChromeClient = WebChromeClient()
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-                assetLoader.shouldInterceptRequest(request.url)
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                val url = request.url
+                if (url.host == "appassets.androidplatform.net" && url.path?.startsWith("/doc/") == true) {
+                    return serveDoc(request)
+                }
+                return assetLoader.shouldInterceptRequest(url)
+            }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url
@@ -195,7 +184,99 @@ class MainActivity : Activity() {
         currentUri = uri
         currentName = queryDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "문서"
         currentMime = contentResolver.getType(uri) ?: typeHint ?: ""
+        if (currentMime.isBlank() || currentMime == "application/octet-stream") {
+            // 확장자로 MIME 추정 (동영상·음악 재생에 필요)
+            val ext = currentName.substringAfterLast('.', "").lowercase()
+            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)?.let { currentMime = it }
+        }
         docToken = System.currentTimeMillis()
+    }
+
+    /**
+     * 현재 문서를 WebView 에 전달. Range 요청을 지원해서 동영상·음악 탐색과 큰 파일 스트리밍이 가능하다.
+     */
+    private fun serveDoc(req: WebResourceRequest): WebResourceResponse {
+        val uri = currentUri ?: return textResponse(404, "열린 문서가 없습니다")
+        return try {
+            val size = querySize(uri)
+            val mime = currentMime.ifBlank { "application/octet-stream" }
+            val range = req.requestHeaders.entries.firstOrNull { it.key.equals("Range", true) }?.value
+            val base = mutableMapOf("Cache-Control" to "no-store", "Accept-Ranges" to "bytes")
+            val m = range?.let { Regex("bytes=(\\d*)-(\\d*)").find(it) }
+            if (m != null && size > 0) {
+                var start = m.groupValues[1].toLongOrNull()
+                var end = m.groupValues[2].toLongOrNull()
+                if (start == null) { start = size - (end ?: 0); end = size - 1 } // bytes=-N (끝에서 N바이트)
+                if (end == null || end >= size) end = size - 1
+                if (start < 0 || start > end) return textResponse(416, "Range Not Satisfiable")
+                val len = end - start + 1
+                val input = openAt(uri, start)
+                base["Content-Range"] = "bytes $start-$end/$size"
+                base["Content-Length"] = len.toString()
+                WebResourceResponse(mime, null, 206, "Partial Content", base, LimitedInputStream(input, len))
+            } else {
+                if (size > 0) base["Content-Length"] = size.toString()
+                val input = contentResolver.openInputStream(uri) ?: return textResponse(404, "파일을 열 수 없습니다")
+                WebResourceResponse(mime, null, 200, "OK", base, input)
+            }
+        } catch (e: Exception) {
+            textResponse(500, "파일을 읽을 수 없습니다: ${e.message}")
+        }
+    }
+
+    private fun textResponse(code: Int, msg: String) =
+        WebResourceResponse("text/plain", "utf-8", code, if (code == 200) "OK" else "Error",
+            mapOf("Cache-Control" to "no-store"), msg.byteInputStream())
+
+    private fun querySize(uri: Uri): Long {
+        if (uri.scheme == "file") return uri.path?.let { java.io.File(it).length() } ?: -1
+        try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+                if (c.moveToFirst() && !c.isNull(0)) return c.getLong(0)
+            }
+        } catch (_: Exception) {
+        }
+        return try {
+            contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1
+        } catch (_: Exception) {
+            -1
+        }
+    }
+
+    /** start 위치부터 읽는 스트림 (가능하면 파일 채널로 바로 이동) */
+    private fun openAt(uri: Uri, start: Long): java.io.InputStream {
+        try {
+            val pfd = contentResolver.openFileDescriptor(uri, "r")
+            if (pfd != null) {
+                val fis = android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd)
+                fis.channel.position(start)
+                return fis
+            }
+        } catch (_: Exception) {
+        }
+        val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("열 수 없음")
+        var left = start
+        while (left > 0) {
+            val n = input.skip(left)
+            if (n <= 0) { if (input.read() < 0) break; left-- } else left -= n
+        }
+        return input
+    }
+
+    private class LimitedInputStream(private val inner: java.io.InputStream, private var left: Long) : java.io.InputStream() {
+        override fun read(): Int {
+            if (left <= 0) return -1
+            val b = inner.read()
+            if (b >= 0) left--
+            return b
+        }
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (left <= 0) return -1
+            val n = inner.read(b, off, minOf(len.toLong(), left).toInt())
+            if (n > 0) left -= n
+            return n
+        }
+        override fun close() = inner.close()
     }
 
     private fun queryDisplayName(uri: Uri): String? {

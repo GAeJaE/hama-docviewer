@@ -11,8 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "docx-preview": "^0.4.1",
+    "dompurify": "^3.2.6",
     "hwp.js": "^0.0.3",
     "jszip": "^3.10.1",
+    "marked": "^15.0.12",
     "pdfjs-dist": "^4.10.38",
     "pptx-preview": "^1.0.7",
     "xlsx": "^0.18.5"

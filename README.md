@@ -5,10 +5,10 @@ HWP·HWPX·Word·Excel·PowerPoint·PDF 문서를 **파일을 눌러서 바로 �
 
 ## 설치
 
-`dist/HamaDocViewer-1.0.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
+`dist/HamaDocViewer-1.2.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
 
 ```bash
-adb install -r dist/HamaDocViewer-1.0.apk
+adb install -r dist/HamaDocViewer-1.2.apk
 ```
 
 설치 후 파일 관리자(내 파일)·카카오톡·메일에서 문서를 누르고 **하마 문서뷰어 → 항상**을 고르면,
@@ -38,8 +38,16 @@ adb install -r dist/HamaDocViewer-1.0.apk
 | XLSX·XLS·ODS·CSV | SheetJS | 시트 탭, 셀 병합, 열 너비 (최대 5000행×200열) |
 | PPTX | pptx-preview | 슬라이드 렌더링 |
 | DOC · PPT (97-2003) | 자체 파서 (`legacy.js`) | 본문/슬라이드 텍스트만 |
-| PDF | pdf.js (한글 CMap 포함) | 원본 그대로 |
+| PDF | pdf.js legacy 빌드 (한글 CMap 포함, 구형 WebView 호환) | 원본 그대로 |
 | ODT·ODP·RTF·TXT | 자체 파서 | 텍스트 |
+| Markdown (MD) | marked + DOMPurify | 제목·표·코드 블록·인용 등 서식 렌더링 |
+| HTML | 샌드박스 iframe | 미리보기(스크립트 차단) / 소스 보기 |
+| JSON · 코드 · 설정 · 자막 | 내장 | 보기 좋게 정렬 / 고정폭 텍스트 (EUC-KR 자동 인식) |
+| 이미지 (JPG·PNG·GIF·WEBP·SVG 등) | WebView | 확대/축소 가능 |
+| 동영상·음악 (MP4·WEBM·MKV·MP3·M4A·WAV·FLAC 등) | WebView 플레이어 | Range 스트리밍으로 탐색 가능 |
+| ZIP | JSZip | 목록 표시, 항목을 눌러 바로 열기 |
+| EPUB | 자체 파서 | 장별 본문·그림 |
+| 그 밖의 모든 파일 | 내장 | 텍스트로 보이면 텍스트, 아니면 16진수 보기 |
 
 미지원: HWP 3.0 이하, 배포용(열람 제한) HWP, 암호 걸린 문서 → 안내 메시지와 [다른 앱으로 열기] 제공.
 

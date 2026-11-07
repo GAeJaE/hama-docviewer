@@ -72,6 +72,13 @@
                 <data android:mimeType="application/pdf" />
                 <data android:mimeType="text/plain" />
 
+                <!-- 그 밖의 거의 모든 파일: 텍스트·마크다운·코드·이미지·동영상·음악·압축 등 -->
+                <data android:mimeType="text/*" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="application/*" />
+
                 <!-- 파일 관리자가 HWP 등을 알 수 없는 형식으로 넘기는 경우 대비 -->
                 <data android:mimeType="application/octet-stream" />
                 <data android:mimeType="application/zip" />
@@ -98,15 +105,22 @@
                 <data android:pathPattern=".*\\.xlsx" />
                 <data android:pathPattern=".*\\.ppt" />
                 <data android:pathPattern=".*\\.pptx" />
+                <data android:pathPattern=".*\\.pdf" />
+                <data android:pathPattern=".*\\.md" />
+                <data android:pathPattern=".*\\.markdown" />
+                <data android:pathPattern=".*\\.json" />
+                <data android:pathPattern=".*\\.txt" />
+                <data android:pathPattern=".*\\.log" />
+                <data android:pathPattern=".*\\.csv" />
+                <data android:pathPattern=".*\\.zip" />
+                <data android:pathPattern=".*\\.epub" />
             </intent-filter>
 
             <!-- 다른 앱에서 '공유'로 보내기 -->
             <intent-filter android:label="@string/app_name">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/*" />
-                <data android:mimeType="text/plain" />
-                <data android:mimeType="text/csv" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
 

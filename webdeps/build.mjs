@@ -52,8 +52,8 @@ await build({
 
 // pdf.js (ES 모듈) - .mjs 대신 .js 로 복사해 WebView MIME 문제 회피
 const pdf = 'node_modules/pdfjs-dist';
-cpSync(`${pdf}/build/pdf.min.mjs`, `${out}/pdf.min.js`);
-cpSync(`${pdf}/build/pdf.worker.min.mjs`, `${out}/pdf.worker.min.js`);
+cpSync(`${pdf}/legacy/build/pdf.min.mjs`, `${out}/pdf.min.js`);
+cpSync(`${pdf}/legacy/build/pdf.worker.min.mjs`, `${out}/pdf.worker.min.js`);
 cpSync(`${pdf}/cmaps`, `${out}/cmaps`, { recursive: true });
 cpSync(`${pdf}/standard_fonts`, `${out}/standard_fonts`, { recursive: true });
 console.log('done');

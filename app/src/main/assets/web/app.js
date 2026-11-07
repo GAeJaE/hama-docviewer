@@ -54,7 +54,16 @@
     state.fromOutside = !!Android.openedFromOutside();
     showViewer(info.name || '문서');
     setStatus('문서를 여는 중…');
+    state.parent = info.parent || null; // 압축 파일 안에서 연 경우 돌아갈 곳
     try {
+      const pre = mediaKind(info.name || '', info.mime || '');
+      if (pre) {
+        state.kind = pre;
+        if (!state.fromOutside) saveRecent(info, pre);
+        await RENDER[pre](null, docEl, info);
+        setStatus('');
+        return;
+      }
       const res = await fetch(info.url, { cache: 'no-store' });
       if (!res.ok) throw new Error(await res.text() || ('HTTP ' + res.status));
       const buf = await res.arrayBuffer();
@@ -92,9 +101,32 @@
     csv: 'csv', tsv: 'csv',
     pptx: 'pptx', pptm: 'pptx', ppsx: 'pptx', potx: 'pptx', ppsm: 'pptx', ppt: 'ppt', pps: 'ppt', pot: 'ppt',
     pdf: 'pdf', odt: 'odt', odp: 'odp', rtf: 'rtf',
-    txt: 'text', text: 'text', log: 'text', md: 'text', json: 'text', xml: 'text', ini: 'text', cfg: 'text', yaml: 'text', yml: 'text',
-    html: 'text', htm: 'text', js: 'text', css: 'text', java: 'text', kt: 'text', py: 'text', c: 'text', cpp: 'text', h: 'text', sql: 'text', sh: 'text', bat: 'text',
+    md: 'markdown', markdown: 'markdown', mdown: 'markdown', mkd: 'markdown', mdx: 'markdown',
+    html: 'html', htm: 'html', xhtml: 'html', json: 'json', geojson: 'json', ipynb: 'json',
+    zip: 'zip', jar: 'zip', apk: 'zip', epub: 'epub',
   };
+  // 텍스트로 여는 확장자 (코드·설정·자막 등)
+  ('txt text log xml ini cfg conf yaml yml toml properties env js mjs cjs jsx tsx css scss less java kt kts gradle py rb php go rs '
+    + 'swift c cc cpp h hpp cs vb lua pl r scala sql sh bash zsh bat cmd ps1 vbs m mm dart groovy ex exs erl hs clj tex bib asm '
+    + 'srt vtt smi ass ssa sub lrc nfo diff patch gitignore gitattributes editorconfig dockerfile makefile cmake reg inf url desktop '
+    + 'vcf ics svelte vue astro gql graphql proto csproj sln plist mhtml').split(' ').forEach((e) => { if (!EXT[e]) EXT[e] = 'text'; });
+
+  const IMAGE_EXT = new Set('jpg jpeg jfif png gif webp bmp ico svg avif heic heif tif tiff'.split(' '));
+  const VIDEO_EXT = new Set('mp4 m4v webm mkv mov 3gp 3g2 ogv'.split(' '));
+  const AUDIO_EXT = new Set('mp3 m4a aac wav ogg oga opus flac amr weba'.split(' '));
+
+  /** 이미지·동영상·음악은 내용을 통째로 읽지 않고 바로 스트리밍 */
+  function mediaKind(name, mime) {
+    const ext = (name.match(/\.([^.]+)$/) || [])[1]?.toLowerCase() || '';
+    if (IMAGE_EXT.has(ext)) return 'image';
+    if (VIDEO_EXT.has(ext)) return 'video';
+    if (AUDIO_EXT.has(ext)) return 'audio';
+    if (EXT[ext]) return null;
+    if (/^image\//.test(mime)) return 'image';
+    if (/^video\//.test(mime)) return 'video';
+    if (/^audio\//.test(mime)) return 'audio';
+    return null;
+  }
 
   async function detectKind(buf, name, mime) {
     const ext = (name.match(/\.([^.]+)$/) || [])[1]?.toLowerCase() || '';
@@ -118,6 +150,8 @@
         if (mt.includes('opendocument.text')) return 'odt';
         if (mt.includes('opendocument.spreadsheet')) return 'sheet';
         if (mt.includes('opendocument.presentation')) return 'odp';
+        if (mt.includes('epub') || has('META-INF/container.xml')) return 'epub';
+        if (!EXT[ext]) return 'zip';
       } catch (e) { /* 손상된 zip */ }
     }
     if (head[0] === 0xd0 && head[1] === 0xcf && head[2] === 0x11 && head[3] === 0xe0) { // CFB(구형 오피스/HWP)
@@ -131,9 +165,12 @@
     if (/hwpx|hwp\+zip/.test(mime)) return 'hwpx';
     if (/hwp/.test(mime)) return 'hwp';
     if (/csv/.test(mime)) return 'csv';
+    if (/markdown/.test(mime)) return 'markdown';
+    if (/html/.test(mime)) return 'html';
+    if (/json/.test(mime)) return 'json';
     if (/^text\//.test(mime)) return 'text';
     if (looksLikeText(new Uint8Array(buf, 0, Math.min(buf.byteLength, 4096)))) return 'text';
-    return 'unknown';
+    return 'hex'; // 해석할 수 없는 파일도 16진수로라도 보여 줌
   }
 
   function looksLikeText(b) {
@@ -246,8 +283,141 @@
     },
 
     async text(buf, el) {
+      const LIMIT = 3 * 1048576;
+      if (buf.byteLength > LIMIT) el.appendChild(notice(`파일이 커서 앞부분 ${LIMIT / 1048576}MB만 표시합니다.`));
       const page = mk('div', 'page text-page mono');
-      page.textContent = decodeText(buf);
+      page.textContent = decodeText(buf.byteLength > LIMIT ? buf.slice(0, LIMIT) : buf);
+      el.appendChild(page);
+    },
+
+    async markdown(buf, el) {
+      const page = mk('div', 'page md-page');
+      page.innerHTML = DOMPurify.sanitize(marked.parse(decodeText(buf), { gfm: true }));
+      el.appendChild(page);
+    },
+
+    async html(buf, el) {
+      const src = decodeText(buf);
+      const bar = notice('웹 페이지(HTML) 미리보기입니다. 안전을 위해 스크립트는 실행하지 않습니다. ');
+      const toggle = mk('button', 'link'); toggle.textContent = '소스 보기';
+      bar.appendChild(toggle);
+      el.appendChild(bar);
+      const frame = document.createElement('iframe');
+      frame.className = 'page html-frame';
+      frame.setAttribute('sandbox', 'allow-same-origin'); // 스크립트 실행 금지
+      frame.srcdoc = src;
+      const fit = () => { try { frame.style.height = (frame.contentDocument.documentElement.scrollHeight + 24) + 'px'; } catch (e) { /* ignore */ } };
+      frame.onload = () => { fit(); setTimeout(fit, 500); };
+      const source = mk('div', 'page text-page mono'); source.textContent = src; source.hidden = true;
+      toggle.onclick = () => {
+        source.hidden = !source.hidden; frame.hidden = !source.hidden;
+        toggle.textContent = source.hidden ? '소스 보기' : '미리보기';
+      };
+      el.append(frame, source);
+    },
+
+    async json(buf, el) {
+      const t = decodeText(buf);
+      let out = t;
+      try { out = JSON.stringify(JSON.parse(t), null, 2); } catch (e) { /* 그대로 표시 */ }
+      const page = mk('div', 'page text-page mono');
+      page.textContent = out;
+      el.appendChild(page);
+    },
+
+    async image(_, el, info) {
+      const img = new Image();
+      img.className = 'image-view';
+      img.alt = info.name || '';
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = () => rej(new Error('이 이미지 형식은 표시할 수 없습니다. (HEIC·TIFF 등은 ⋮ → 다른 앱으로 열기)'));
+        img.src = info.url;
+      });
+      const wrap = mk('div', 'media-wrap');
+      const cap = mk('div', 'media-cap'); cap.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+      wrap.append(img, cap);
+      el.appendChild(wrap);
+    },
+
+    async video(_, el, info) { mediaPlayer('video', el, info); },
+    async audio(_, el, info) { mediaPlayer('audio', el, info); },
+
+    async zip(buf, el, info) {
+      const zip = await JSZip.loadAsync(buf);
+      const files = Object.values(zip.files).filter((f) => !f.dir);
+      const page = mk('div', 'page list-page');
+      const h = mk('div', 'list-head'); h.textContent = `압축 파일 · ${files.length}개 항목 (눌러서 열기)`;
+      page.appendChild(h);
+      const ul = mk('ul', 'zip-list');
+      files.sort((a, b) => a.name.localeCompare(b.name, 'ko')).forEach((f) => {
+        const li = mk('li');
+        const n = mk('span', 'name'); n.textContent = f.name;
+        const sz = mk('span', 'size');
+        const raw = f._data && f._data.uncompressedSize;
+        sz.textContent = raw != null ? fmtSize(raw) : '';
+        li.append(n, sz);
+        li.onclick = async () => {
+          setStatus('압축을 푸는 중…');
+          const blob = await f.async('blob');
+          const url = URL.createObjectURL(blob);
+          window.openDocument({ name: f.name.split('/').pop(), mime: '', url, parent: info });
+        };
+        ul.appendChild(li);
+      });
+      page.appendChild(ul);
+      el.appendChild(page);
+    },
+
+    async epub(buf, el) {
+      const zip = await JSZip.loadAsync(buf);
+      const getFile = (p) => zip.file(p) || zip.file(decodeURIComponent(p));
+      const container = getFile('META-INF/container.xml');
+      const cdoc = container && new DOMParser().parseFromString(await container.async('string'), 'application/xml');
+      const opfPath = cdoc && cdoc.getElementsByTagNameNS('*', 'rootfile')[0]?.getAttribute('full-path');
+      if (!opfPath) throw new Error('EPUB 구조를 해석할 수 없습니다.');
+      const opf = new DOMParser().parseFromString(await getFile(opfPath).async('string'), 'application/xml');
+      const base = opfPath.replace(/[^/]*$/, '');
+      const items = {};
+      for (const it of opf.getElementsByTagNameNS('*', 'item')) items[it.getAttribute('id')] = it.getAttribute('href');
+      const spine = [...opf.getElementsByTagNameNS('*', 'itemref')].map((r) => items[r.getAttribute('idref')]).filter(Boolean);
+      const resolve = (from, rel) => {
+        const out = [];
+        for (const p of (from.replace(/[^/]*$/, '') + rel).split('/')) { if (p === '..') out.pop(); else if (p !== '.') out.push(p); }
+        return out.join('/');
+      };
+      for (const href of spine) {
+        const path = base + href;
+        const f = getFile(path);
+        if (!f) continue;
+        const doc = new DOMParser().parseFromString(await f.async('string'), 'text/html');
+        const page = mk('div', 'page md-page');
+        page.innerHTML = DOMPurify.sanitize(doc.body ? doc.body.innerHTML : '');
+        for (const img of page.querySelectorAll('img')) {
+          const src = img.getAttribute('src');
+          const imgFile = src && getFile(resolve(path, src));
+          if (imgFile) img.src = URL.createObjectURL(await imgFile.async('blob'));
+          else img.remove();
+        }
+        el.appendChild(page);
+      }
+      if (!el.querySelector('.md-page')) throw new Error('EPUB 본문을 찾지 못했습니다.');
+    },
+
+    async hex(buf, el, info) {
+      el.appendChild(notice('이 형식은 내용을 해석할 수 없어 16진수로 보여 줍니다. 전용 앱이 있다면 ⋮ → 다른 앱으로 열기를 이용하세요.'));
+      const MAX = 64 * 1024;
+      const b = new Uint8Array(buf, 0, Math.min(buf.byteLength, MAX));
+      const lines = [`${info.name || ''}  (${fmtSize(buf.byteLength)})`, ''];
+      for (let off = 0; off < b.length; off += 16) {
+        const row = b.subarray(off, off + 16);
+        const hex = [...row].map((x) => x.toString(16).padStart(2, '0')).join(' ').padEnd(47, ' ');
+        const asc = [...row].map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : '.')).join('');
+        lines.push(`${off.toString(16).padStart(8, '0')}  ${hex}  ${asc}`);
+      }
+      if (buf.byteLength > MAX) lines.push('', `… 처음 ${MAX / 1024}KB만 표시`);
+      const page = mk('div', 'page text-page mono hex');
+      page.textContent = lines.join('\n');
       el.appendChild(page);
     },
 
@@ -411,6 +581,35 @@
       setTimeout(fin, 120);
     });
   }
+  function fmtSize(n) {
+    if (n < 1024) return n + 'B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + 'KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + 'MB';
+    return (n / 1073741824).toFixed(2) + 'GB';
+  }
+
+  function mediaPlayer(tag, el, info) {
+    const wrap = mk('div', 'media-wrap' + (tag === 'audio' ? ' audio' : ''));
+    if (tag === 'audio') {
+      const icon = mk('div', 'audio-icon'); icon.textContent = '♪';
+      const t = mk('div', 'media-cap'); t.textContent = info.name || '';
+      wrap.append(icon, t);
+    }
+    const m = document.createElement(tag);
+    m.controls = true;
+    m.preload = 'metadata';
+    m.setAttribute('playsinline', '');
+    m.className = tag + '-view';
+    m.onerror = () => {
+      wrap.remove();
+      showError(new Error('이 기기에서 재생할 수 없는 형식입니다. ⋮ → 다른 앱으로 열기를 이용하세요.'));
+    };
+    m.src = info.url;
+    wrap.appendChild(m);
+    el.appendChild(wrap);
+    state.cleanup.push(() => { m.pause(); m.removeAttribute('src'); m.load(); });
+  }
+
   function notice(msg) { const d = mk('div', 'notice'); d.textContent = msg; return d; }
 
   function textPage(lines) {
@@ -503,7 +702,7 @@
 
   // ------------------------------------------------------------ 최근 문서
   const RECENT_KEY = 'recent.v1';
-  const BADGE = { hwp: ['HWP', '#1a8fd8'], hwpx: ['HWPX', '#1a8fd8'], docx: ['DOCX', '#2b579a'], doc: ['DOC', '#2b579a'], sheet: ['XLS', '#217346'], csv: ['CSV', '#217346'], pptx: ['PPTX', '#c43e1c'], ppt: ['PPT', '#c43e1c'], pdf: ['PDF', '#d93025'] };
+  const BADGE = { hwp: ['HWP', '#1a8fd8'], hwpx: ['HWPX', '#1a8fd8'], docx: ['DOCX', '#2b579a'], doc: ['DOC', '#2b579a'], sheet: ['XLS', '#217346'], csv: ['CSV', '#217346'], pptx: ['PPTX', '#c43e1c'], ppt: ['PPT', '#c43e1c'], pdf: ['PDF', '#d93025'], markdown: ['MD', '#475467'], html: ['HTML', '#e8710a'], json: ['JSON', '#475467'], text: ['TXT', '#6b7280'], image: ['IMG', '#7c3aed'], video: ['VID', '#0f766e'], audio: ['MP3', '#0f766e'], zip: ['ZIP', '#a16207'], epub: ['EPUB', '#9333ea'] };
   function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; } }
   function storeRecent(list) { try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 20))); } catch (e) { /* ignore */ } }
   function saveRecent(info, kind) {
@@ -631,6 +830,13 @@
       setUpdMsg(`내려받는 중… ${p.percent}% (${(p.done / 1048576).toFixed(1)} / ${(p.total / 1048576).toFixed(1)}MB)`);
     }
   };
+  docEl.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (href.startsWith('#')) return; // 문서 안 이동
+    if (!/^(https?:|mailto:|tel:)/i.test(href)) e.preventDefault(); // 상대 경로 등은 열 수 없음
+  });
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
     if (b) { act(b.dataset.act); return; }
@@ -646,6 +852,7 @@
   window.onBack = function () {
     if (!$('#updBack').hidden) { hideUpdate(); return true; }
     if (!menu.hidden) { menu.hidden = true; return true; }
+    if (!viewer.hidden && state.parent) { window.openDocument(state.parent); return true; }
     if (!viewer.hidden && !state.fromOutside) { showHome(); return true; }
     return false;
   };

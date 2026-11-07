@@ -12,3 +12,9 @@ window.docxPreview = docx;
 window.pptxPreview = { init: pptxInit };
 window.HwpViewer = HwpViewer;
 window.pako = pako;
+
+// 마크다운 렌더링 + HTML 정화(문서 속 스크립트 차단)
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+window.marked = marked;
+window.DOMPurify = DOMPurify;

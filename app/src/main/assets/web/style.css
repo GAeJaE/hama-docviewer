@@ -170,3 +170,44 @@ table.sheet td.wrap { white-space: pre-wrap; }
 .hwpx-page table.hwpx-tbl td { padding: 1px 2px; vertical-align: middle; overflow: hidden; }
 .hwpx-page img { max-width: 100%; height: auto; }
 .hwpx-page .shape { display: inline-block; vertical-align: top; }
+
+/* 마크다운 · EPUB */
+.md-page { max-width: 900px; padding: 24px 22px; font-size: 15px; line-height: 1.75; color: #1f2937; word-break: break-word; }
+.md-page h1, .md-page h2 { border-bottom: 1px solid #e5e7eb; padding-bottom: .3em; }
+.md-page h1 { font-size: 1.7em; } .md-page h2 { font-size: 1.4em; } .md-page h3 { font-size: 1.2em; }
+.md-page h1, .md-page h2, .md-page h3, .md-page h4 { margin: 1.2em 0 .5em; line-height: 1.35; }
+.md-page p, .md-page ul, .md-page ol, .md-page blockquote, .md-page table, .md-page pre { margin: 0 0 1em; }
+.md-page a { color: var(--primary-2); }
+.md-page code { background: #f1f3f5; border-radius: 4px; padding: .1em .35em; font-family: "Roboto Mono", "Noto Sans Mono", monospace; font-size: .88em; }
+.md-page pre { background: #1e293b; color: #e2e8f0; padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+.md-page pre code { background: none; padding: 0; color: inherit; }
+.md-page blockquote { border-left: 4px solid #cbd5e1; padding: .2em 0 .2em 1em; color: #475569; }
+.md-page table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md-page th, .md-page td { border: 1px solid #d0d7de; padding: 6px 12px; }
+.md-page th { background: #f6f8fa; }
+.md-page img { max-width: 100%; height: auto; }
+.md-page hr { border: 0; border-top: 1px solid #e5e7eb; margin: 1.5em 0; }
+
+/* HTML 미리보기 */
+.html-frame { display: block; width: 100%; max-width: 1000px; min-height: 60vh; border: 0; }
+
+/* 이미지 · 동영상 · 음악 */
+.media-wrap { text-align: center; padding: 4px 0 12px; }
+.image-view { max-width: 100%; height: auto; background: repeating-conic-gradient(#e5e7eb 0 25%, #fff 0 50%) 0 0 / 16px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.video-view { width: 100%; max-height: 80vh; background: #000; border-radius: 8px; }
+.media-wrap.audio { background: #fff; border-radius: 14px; max-width: 520px; margin: 30px auto; padding: 30px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.audio-icon { width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 50%; background: #0f766e; color: #fff; font-size: 52px; line-height: 96px; }
+.audio-view { width: 100%; margin-top: 16px; }
+.media-cap { color: var(--muted); font-size: 13px; margin-top: 8px; word-break: break-all; }
+
+/* 압축 파일 목록 */
+.list-page { max-width: 900px; padding: 8px 0; }
+.list-head { padding: 10px 16px; font-size: 14px; color: var(--muted); border-bottom: 1px solid #eef0f3; }
+.zip-list { list-style: none; margin: 0; padding: 0; }
+.zip-list li { display: flex; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #f1f3f5; font-size: 14px; }
+.zip-list li:active { background: #eef2f7; }
+.zip-list .name { flex: 1; word-break: break-all; }
+.zip-list .size { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.hex { font-size: 11px; white-space: pre; overflow-x: auto; }
+.chip.img { background: #7c3aed; } .chip.media { background: #0f766e; } .chip.zip { background: #a16207; }
+.card h2 small.sub { font-size: 11px; font-weight: 400; color: var(--muted); }
