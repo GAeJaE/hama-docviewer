@@ -32,6 +32,8 @@
   }
 
   function resetViewer() {
+    if (window.PdfNotes) PdfNotes.detach();
+    $('#btnPen').hidden = true;
     state.cleanup.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } });
     state.cleanup = [];
     docEl.innerHTML = '';
@@ -421,11 +423,11 @@
       el.appendChild(page);
     },
 
-    async pdf(buf, el) {
+    async pdf(buf, el, info) {
       const pdfjs = await import('./lib/pdf.min.js');
       pdfjs.GlobalWorkerOptions.workerSrc = new URL('./lib/pdf.worker.min.js', location.href).href;
       const doc = await pdfjs.getDocument({
-        data: new Uint8Array(buf),
+        data: new Uint8Array(buf.slice(0)), // pdf.js 가 버퍼를 워커로 넘기며 비우므로 사본 전달
         cMapUrl: new URL('./lib/cmaps/', location.href).href, cMapPacked: true,
         standardFontDataUrl: new URL('./lib/standard_fonts/', location.href).href,
         isEvalSupported: false,
@@ -446,6 +448,10 @@
         holders.push(div);
         if (i === 1) setStatus('');
       }
+      // 필기 레이어 연결 (문서 이름+크기로 구분해 자동 저장)
+      const had = PdfNotes.attach(holders, { key: `${info.name || 'pdf'}|${buf.byteLength}`, buf, name: info.name || '' });
+      $('#btnPen').hidden = false;
+      if (had) Android.toast('저장된 필기를 불러왔습니다. ✏️ 버튼으로 이어서 필기할 수 있습니다.');
       const renderPage = async (div) => {
         if (div._done) return;
         div._done = true;
@@ -677,7 +683,8 @@
         const rect = viewer.getBoundingClientRect();
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
         const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-        start = { d: dist(e.touches), cx, cy, ratio: 1 };
+        if (window.PdfNotes) PdfNotes.cancelDrawing();
+        start = { d: dist(e.touches), cx, cy, ratio: 1, mx: cx, my: cy };
         const ox = (viewer.scrollLeft + cx) / state.zoom, oy = (viewer.scrollTop + cy) / state.zoom;
         docEl.style.transformOrigin = `${ox}px ${oy}px`;
       }
@@ -685,6 +692,14 @@
     viewer.addEventListener('touchmove', (e) => {
       if (!start || e.touches.length !== 2) return;
       e.preventDefault();
+      // 손가락 필기 모드에선 기본 스크롤이 막혀 있으므로 두 손가락 이동으로 스크롤
+      if (document.body.classList.contains('note-on') && !document.body.classList.contains('pen-only')) {
+        const rect = viewer.getBoundingClientRect();
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        viewer.scrollLeft -= mx - start.mx; viewer.scrollTop -= my - start.my;
+        start.mx = mx; start.my = my;
+      }
       let ratio = dist(e.touches) / start.d;
       ratio = Math.max(0.15 / state.zoom, Math.min(5 / state.zoom, ratio));
       start.ratio = ratio;
@@ -843,6 +858,7 @@
     if (!menu.hidden && !e.target.closest('#menu') && !e.target.closest('#btnMore')) menu.hidden = true;
   });
   $('#btnMore').onclick = () => { menu.hidden = !menu.hidden; };
+  $('#btnPen').onclick = () => { menu.hidden = true; PdfNotes.toggle(); };
   $('#btnOpen').onclick = () => Android.pickFile();
   $('#btnPick').onclick = () => Android.pickFile();
   $('#btnBack').onclick = () => { if (!window.onBack()) Android.close(); };
@@ -851,6 +867,7 @@
   /** 뒤로 가기: true 를 반환하면 앱 안에서 처리됨 */
   window.onBack = function () {
     if (!$('#updBack').hidden) { hideUpdate(); return true; }
+    if (window.PdfNotes && PdfNotes.isOn()) { PdfNotes.setOn(false); return true; }
     if (!menu.hidden) { menu.hidden = true; return true; }
     if (!viewer.hidden && state.parent) { window.openDocument(state.parent); return true; }
     if (!viewer.hidden && !state.fromOutside) { showHome(); return true; }

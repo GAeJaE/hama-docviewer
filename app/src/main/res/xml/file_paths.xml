@@ -2,4 +2,6 @@
 <paths>
     <!-- 업데이트 APK 임시 저장 위치 -->
     <cache-path name="updates" path="updates/" />
+    <!-- 필기 포함 PDF 내보내기(공유) 임시 위치 -->
+    <cache-path name="exports" path="exports/" />
 </paths>

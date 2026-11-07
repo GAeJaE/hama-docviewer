@@ -5,14 +5,24 @@ HWP·HWPX·Word·Excel·PowerPoint·PDF 문서를 **파일을 눌러서 바로 �
 
 ## 설치
 
-`dist/HamaDocViewer-1.2.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
+`dist/HamaDocViewer-1.3.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
 
 ```bash
-adb install -r dist/HamaDocViewer-1.2.apk
+adb install -r dist/HamaDocViewer-1.3.apk
 ```
 
 설치 후 파일 관리자(내 파일)·카카오톡·메일에서 문서를 누르고 **하마 문서뷰어 → 항상**을 고르면,
 다음부터는 탭 한 번으로 열립니다. 앱을 직접 실행해 [파일 열기]로 불러올 수도 있습니다.
+
+## PDF 필기 (v1.3+)
+
+PDF를 열고 상단 ✏️ 버튼을 누르면 필기 모드가 됩니다. 태블릿 + 스타일러스(S펜 등)에 맞춰 만들었습니다.
+
+- 도구: 펜 · 형광펜 · 지우개(획 단위), 색상 5가지, 굵기 3단계, 되돌리기/다시 실행, 모두 지우기
+- **손바닥 오인식 방지**: 스타일러스가 감지되면 자동으로 '펜으로만 필기' 모드 → 펜은 필기, 손가락은 스크롤
+  (스타일러스가 없으면 손가락으로 필기, 두 손가락으로 스크롤/확대) — 「☝ 손가락」 버튼으로 전환
+- **자동 저장**: 필기는 문서(파일 이름+크기)별로 앱 내부에 저장되어 다시 열면 그대로 보입니다. 원본 PDF는 수정하지 않습니다.
+- **PDF 저장 / 공유**: 필기를 벡터 선으로 넣은 새 PDF(`원본이름_필기.pdf`)를 원하는 위치에 저장하거나 공유합니다.
 
 ## 자동 업데이트 (v1.2+)
 
@@ -58,6 +68,7 @@ app/src/main/java/com/hama/docviewer/MainActivity.kt  # 인텐트 수신, WebVie
 app/src/main/java/com/hama/docviewer/Updater.kt       # GitHub 릴리스 확인, APK 다운로드·설치
 app/src/main/AndroidManifest.xml                      # 파일 형식별 intent-filter (탭해서 열기)
 app/src/main/assets/web/                              # 뷰어 화면 (HTML/JS)
+  ├─ pdfnote.js  PDF 필기 레이어 (펜/형광펜/지우개, 자동 저장, pdf-lib 내보내기)
   ├─ app.js      형식 판별(확장자 + 파일 시그니처), 렌더러 선택, 확대/축소, 최근 문서
   ├─ hwpx.js     HWPX 렌더러
   ├─ legacy.js   HWP/DOC/PPT/RTF/ODF 텍스트 추출

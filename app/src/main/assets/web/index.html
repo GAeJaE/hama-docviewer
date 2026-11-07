@@ -15,6 +15,9 @@
     <button id="btnOpen" class="icon" aria-label="파일 열기">
       <svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/></svg>
     </button>
+    <button id="btnPen" class="icon" aria-label="필기" hidden>
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+    </button>
     <button id="btnMore" class="icon" aria-label="메뉴" hidden>
       <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
     </button>
@@ -85,12 +88,38 @@
   <main id="viewer" hidden>
     <div id="doc"></div>
   </main>
+  <!-- PDF 필기 도구 -->
+  <div id="noteBar" hidden>
+    <div class="nb-row">
+      <button data-tool="pen" title="펜"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+      <button data-tool="hl" title="형광펜"><svg viewBox="0 0 24 24"><path d="M6 14l3 3v4h6v-4l3-3V9H6v5zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.6 8 3.5 5.88zm13.46.71l2.12-2.12 1.41 1.41L18.38 8l-1.42-1.41z"/></svg></button>
+      <button data-tool="eraser" title="지우개"><svg viewBox="0 0 24 24"><path d="M16.24 3.56l4.95 4.94a2 2 0 0 1 0 2.83L12 20.53A5 5 0 0 1 8.46 22H4v-2h3.6l-3.18-3.17a2 2 0 0 1 0-2.83L13.41 3.56a2 2 0 0 1 2.83 0zM6.04 15.42L9.6 19h1.98l7.05-7.06-4.95-4.95-7.64 7.64z"/></svg></button>
+      <span class="nb-sep"></span>
+      <span class="nb-colors"></span>
+      <span class="nb-sep"></span>
+      <button data-size="0" title="가늘게" class="nb-size"><i style="width:5px;height:5px"></i></button>
+      <button data-size="1" title="보통" class="nb-size"><i style="width:9px;height:9px"></i></button>
+      <button data-size="2" title="굵게" class="nb-size"><i style="width:14px;height:14px"></i></button>
+    </div>
+    <div class="nb-row">
+      <button data-note="undo" title="되돌리기"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62A7.97 7.97 0 0 1 20.07 16l2.37-.78A10.5 10.5 0 0 0 12.5 8z"/></svg></button>
+      <button data-note="redo" title="다시 실행"><svg viewBox="0 0 24 24"><path d="M18.4 10.6A10.46 10.46 0 0 0 1.56 15.22l2.36.78A7.97 7.97 0 0 1 16.62 12.38L13 16h9V7l-3.6 3.6z"/></svg></button>
+      <button data-note="finger" class="nb-text" title="손가락 필기">☝ 손가락</button>
+      <button data-note="clear" class="nb-text" title="모두 지우기">모두 지우기</button>
+      <span class="nb-sep"></span>
+      <button data-note="save" class="nb-text strong" title="필기 포함 PDF로 저장">PDF 저장</button>
+      <button data-note="share" class="nb-text" title="필기 포함 PDF 공유">공유</button>
+      <button data-note="close" class="nb-text" title="필기 끝내기">완료</button>
+    </div>
+  </div>
+
   <div id="status" hidden></div>
   <nav id="sheetTabs" hidden></nav>
 
   <script src="lib/vendor.js"></script>
   <script src="legacy.js"></script>
   <script src="hwpx.js"></script>
+  <script src="pdfnote.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

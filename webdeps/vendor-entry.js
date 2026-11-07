@@ -18,3 +18,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 window.marked = marked;
 window.DOMPurify = DOMPurify;
+
+// PDF 필기 내보내기 (필기를 벡터 선으로 PDF에 그려 넣음)
+import * as PDFLib from 'pdf-lib';
+window.PDFLib = PDFLib;

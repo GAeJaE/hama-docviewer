@@ -75,7 +75,16 @@ class MainActivity : Activity() {
             textZoom = 100
         }
         webView.addJavascriptInterface(Bridge(), "Android")
-        webView.webChromeClient = WebChromeClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            // 화면(JS) 오류를 logcat 에서 볼 수 있게 (adb logcat -s HamaWeb)
+            override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
+                android.util.Log.println(
+                    if (m.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) android.util.Log.ERROR else android.util.Log.INFO,
+                    "HamaWeb", "${m.message()} (${m.sourceId()?.substringAfterLast('/')}:${m.lineNumber()})"
+                )
+                return true
+            }
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val url = request.url
@@ -149,6 +158,22 @@ class MainActivity : Activity() {
             window.navigationBarColor = Color.BLACK
         }
         return root
+    }
+
+    private var exportName = "필기.pdf"
+    private var exportFile: java.io.File? = null
+
+    /** 필기 저장 파일: 문서 키(이름|크기)의 해시 */
+    private fun noteFile(key: String): java.io.File {
+        val hash = java.security.MessageDigest.getInstance("SHA-1").digest(key.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        return java.io.File(java.io.File(filesDir, "notes").apply { mkdirs() }, "$hash.json")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 앱이 가려질 때 필기 즉시 저장
+        if (::webView.isInitialized) webView.evaluateJavascript("window.PdfNotes && PdfNotes.flush()", null)
     }
 
     override fun onResume() {
@@ -333,6 +358,19 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_EXPORT) {
+            val dest = data?.data
+            val src = exportFile
+            if (resultCode == RESULT_OK && dest != null && src != null) {
+                try {
+                    contentResolver.openOutputStream(dest)?.use { out -> src.inputStream().use { it.copyTo(out) } }
+                    Toast.makeText(this, "필기 포함 PDF를 저장했습니다", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "저장 실패: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+            return
+        }
         if (requestCode != REQ_PICK || resultCode != RESULT_OK) return
         val uri = data?.data ?: return
         try {
@@ -411,6 +449,64 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun close() = runOnUiThread { finish() }
 
+        // ---- PDF 필기: 문서별 자동 저장 (앱 내부 저장소)
+        @JavascriptInterface
+        fun loadNotes(key: String): String = try {
+            noteFile(key).takeIf { it.exists() }?.readText() ?: ""
+        } catch (_: Exception) {
+            ""
+        }
+
+        @JavascriptInterface
+        fun saveNotes(key: String, json: String) {
+            try {
+                val f = noteFile(key)
+                if (json.contains("\"strokes\":{}")) f.delete() else {
+                    val tmp = java.io.File(f.path + ".tmp")
+                    tmp.writeText(json)
+                    tmp.renameTo(f)
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        // ---- 필기 포함 PDF 내보내기: base64 조각으로 받아 임시 파일에 쓴 뒤 저장/공유
+        @JavascriptInterface
+        fun exportBegin(name: String) {
+            exportName = name.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            val dir = java.io.File(cacheDir, "exports").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            exportFile = java.io.File(dir, exportName)
+            exportFile?.writeBytes(ByteArray(0))
+        }
+
+        @JavascriptInterface
+        fun exportChunk(b64: String) {
+            exportFile?.appendBytes(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
+        }
+
+        @JavascriptInterface
+        fun exportFinish(mode: String) = runOnUiThread {
+            val f = exportFile ?: return@runOnUiThread
+            if (mode == "share") {
+                val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", f)
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(send, "필기 포함 PDF 공유"))
+            } else {
+                val create = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_TITLE, exportName)
+                }
+                @Suppress("DEPRECATION")
+                startActivityForResult(create, REQ_EXPORT)
+            }
+        }
+
         @JavascriptInterface
         fun appVersion(): String = updater.currentVersion
 
@@ -426,6 +522,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_PICK = 1001
+        private const val REQ_EXPORT = 1002
         private val COLOR_PRIMARY = Color.parseColor("#1F4E79")
         private val COLOR_BOTTOM = Color.parseColor("#F3F3F3")
     }
