@@ -44,6 +44,12 @@ class MainActivity : Activity() {
     private var pageReady = false
     private var openedFromOutside = false
 
+    private val updater by lazy {
+        Updater(this) { fn, data ->
+            runOnUiThread { webView.evaluateJavascript("window.$fn && window.$fn($data)", null) }
+        }
+    }
+
     private val assetLoader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -154,6 +160,11 @@ class MainActivity : Activity() {
             window.navigationBarColor = Color.BLACK
         }
         return root
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updater.onResume() // '설치 허용' 설정에서 돌아온 경우 설치 이어가기
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -318,6 +329,18 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun close() = runOnUiThread { finish() }
+
+        @JavascriptInterface
+        fun appVersion(): String = updater.currentVersion
+
+        @JavascriptInterface
+        fun checkUpdate(manual: Boolean) = updater.check(manual)
+
+        @JavascriptInterface
+        fun downloadUpdate() = updater.downloadAndInstall()
+
+        @JavascriptInterface
+        fun openReleasePage() = runOnUiThread { updater.openReleasePage() }
     }
 
     companion object {

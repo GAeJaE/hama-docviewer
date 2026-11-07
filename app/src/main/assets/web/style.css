@@ -43,11 +43,30 @@ button.icon svg { width: 24px; height: 24px; fill: #fff; }
   padding: 13px 18px; font-size: 15px; color: var(--text);
 }
 #menu button:active { background: #eef2f7; }
+#menu button.has-update { color: var(--primary-2); font-weight: 700; }
+#btnMore { position: relative; }
+#btnMore.badge-dot::after { content: ''; position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #ff5a4f; border: 2px solid var(--primary); }
 
 /* 홈 */
 #home { flex: 1; overflow: auto; padding: 16px; }
 .hero { text-align: center; padding: 28px 12px 20px; }
-.hero .logo { font-size: 56px; }
+.hero .logo { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 4px 14px rgba(31,78,121,.3); }
+footer.ver { text-align: center; color: var(--muted); font-size: 13px; padding: 6px 0 20px; }
+
+/* 업데이트 대화상자 */
+#updBack { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+#updBox { background: #fff; width: 100%; max-width: 520px; border-radius: 18px 18px 0 0; padding: 22px 20px 18px; box-shadow: 0 -4px 20px rgba(0,0,0,.2); }
+#updBox h3 { margin: 0 0 4px; font-size: 18px; color: var(--primary); }
+#updVer { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+#updNotes { max-height: 30vh; overflow: auto; font-size: 14px; line-height: 1.6; white-space: pre-wrap; background: #f5f7fa; border-radius: 10px; padding: 10px 12px; color: #344054; }
+#updNotes:empty { display: none; }
+#updProg { height: 8px; background: #e4e9f0; border-radius: 4px; overflow: hidden; margin: 14px 0 0; }
+#updBar { height: 100%; width: 0; background: var(--primary-2); transition: width .2s; }
+#updMsg { font-size: 13px; color: #475467; min-height: 1em; margin: 10px 0 0; line-height: 1.5; }
+#updMsg.err { color: #b42318; }
+.upd-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+button.primary.small { font-size: 15px; padding: 10px 24px; }
+button:disabled { opacity: .5; }
 .hero h1 { margin: 8px 0 6px; font-size: 24px; color: var(--primary); }
 .hero p { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 button.primary {

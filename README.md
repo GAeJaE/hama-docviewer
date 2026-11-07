@@ -1,7 +1,7 @@
 # 하마 문서뷰어 (Android)
 
 HWP·HWPX·Word·Excel·PowerPoint·PDF 문서를 **파일을 눌러서 바로 여는** 안드로이드 뷰어입니다.
-모든 처리는 기기 안에서 오프라인으로 이루어지며, 문서 내용이 외부로 전송되지 않습니다.
+문서는 기기 안에서만 처리되며 외부로 전송되지 않습니다. (인터넷은 업데이트 확인·다운로드에만 사용)
 
 ## 설치
 
@@ -13,6 +13,20 @@ adb install -r dist/HamaDocViewer-1.0.apk
 
 설치 후 파일 관리자(내 파일)·카카오톡·메일에서 문서를 누르고 **하마 문서뷰어 → 항상**을 고르면,
 다음부터는 탭 한 번으로 열립니다. 앱을 직접 실행해 [파일 열기]로 불러올 수도 있습니다.
+
+## 자동 업데이트 (v1.2+)
+
+- 앱을 열면 12시간에 한 번 GitHub 최신 릴리스(`GAeJaE/hama-docviewer`)를 확인합니다.
+- 새 버전이 있으면 홈 화면에서 안내 창이 뜨고, [업데이트]를 누르면 앱 안에서 APK를 내려받아 설치 화면을 엽니다.
+  처음 한 번은 Android가 「이 출처 허용」 설정을 요구합니다.
+- 문서를 보는 중에는 방해하지 않고 ⋮ 메뉴에 빨간 점과 「업데이트 (vX.Y)」만 표시합니다.
+- 홈 화면 아래 「업데이트 확인」이나 ⋮ 메뉴에서 직접 확인할 수도 있습니다.
+
+### 새 버전 배포 방법
+1. `app/build.gradle.kts` 의 `versionCode` 를 올리고 `versionName` 을 바꿉니다 (예: 1.3).
+2. `./gradlew assembleDebug` 로 빌드합니다. 같은 PC의 디버그 키로 서명해야 기존 앱 위에 덮어 설치됩니다.
+3. 태그 `v<versionName>` 으로 GitHub 릴리스를 만들고 APK를 첨부합니다:
+   `gh release create v1.3 dist/HamaDocViewer-1.3.apk --title "하마 문서뷰어 v1.3" --notes "변경 내용"`
 
 ## 지원 형식
 
@@ -33,6 +47,7 @@ adb install -r dist/HamaDocViewer-1.0.apk
 
 ```
 app/src/main/java/com/hama/docviewer/MainActivity.kt  # 인텐트 수신, WebView, 파일 스트리밍
+app/src/main/java/com/hama/docviewer/Updater.kt       # GitHub 릴리스 확인, APK 다운로드·설치
 app/src/main/AndroidManifest.xml                      # 파일 형식별 intent-filter (탭해서 열기)
 app/src/main/assets/web/                              # 뷰어 화면 (HTML/JS)
   ├─ app.js      형식 판별(확장자 + 파일 시그니처), 렌더러 선택, 확대/축소, 최근 문서
@@ -43,7 +58,7 @@ webdeps/                                              # JS 라이브러리 번�
 ```
 
 문서는 `https://appassets.androidplatform.net/doc/...` 가상 경로로 WebView에 스트리밍됩니다
-(`WebViewAssetLoader`). 인터넷 권한이 없는 앱입니다.
+(`WebViewAssetLoader`). 외부 통신은 `Updater.kt`(GitHub 릴리스 조회·APK 다운로드)뿐입니다.
 
 ## 빌드
 

@@ -7,6 +7,7 @@
     // 브라우저에서 테스트할 때 쓰는 대체 구현
     getPending: () => '', openedFromOutside: () => false, pickFile: () => devPick(),
     openRecent: () => {}, share: () => {}, openWithOther: () => {}, toast: (m) => console.log(m), close: () => {},
+    appVersion: () => 'dev', checkUpdate: () => {}, downloadUpdate: () => {}, openReleasePage: () => {},
   };
 
   const home = $('#home'), viewer = $('#viewer'), docEl = $('#doc'), statusEl = $('#status');
@@ -543,8 +544,93 @@
       case 'share': Android.share(); break;
       case 'other': Android.openWithOther(); break;
       case 'open': Android.pickFile(); break;
+      case 'update':
+        if (upd.info && upd.info.newer) showUpdate(upd.info);
+        else checkUpdate(true);
+        break;
     }
   }
+
+  // ------------------------------------------------------------ 업데이트
+  const UPD_KEY = 'upd.v1';
+  const DAY = 86400000;
+  const upd = { info: null, busy: false, failed: false };
+  const updState = () => { try { return JSON.parse(localStorage.getItem(UPD_KEY) || '{}'); } catch (e) { return {}; } };
+  const saveUpd = (s) => { try { localStorage.setItem(UPD_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ } };
+  $('#verText').textContent = '버전 ' + Android.appVersion();
+
+  function checkUpdate(manual) {
+    if (manual) Android.toast('업데이트를 확인하는 중…');
+    Android.checkUpdate(!!manual);
+  }
+
+  window.onUpdateInfo = function (r) {
+    if (r.error) { if (r.manual) Android.toast('업데이트 확인 실패: ' + r.error); return; }
+    const s = updState(); s.lastCheck = Date.now(); saveUpd(s);
+    if (!r.newer) { if (r.manual) Android.toast(`최신 버전입니다 (v${r.current})`); return; }
+    upd.info = r;
+    // 메뉴에 표시
+    const mi = menu.querySelector('[data-act="update"]');
+    mi.textContent = `업데이트 (v${r.latest})`;
+    mi.classList.add('has-update');
+    $('#btnMore').classList.add('badge-dot');
+    if (r.manual) { showUpdate(r); return; }
+    // 자동 확인: 문서를 보는 중이면 방해하지 않고 메뉴 표시만, '나중에' 누른 버전은 3일간 묻지 않음
+    if (!viewer.hidden) return;
+    if (s.skip === r.latest && Date.now() - (s.skipAt || 0) < 3 * DAY) return;
+    showUpdate(r);
+  };
+
+  function showUpdate(r) {
+    upd.failed = false;
+    $('#updTitle').textContent = '새 버전이 있습니다';
+    $('#updVer').textContent = `현재 v${r.current} → 새 버전 v${r.latest}` + (r.size ? ` · ${(r.size / 1048576).toFixed(1)}MB` : '');
+    $('#updNotes').textContent = (r.notes || '')
+      .split('\n').filter((l) => !/Generated with|^\s*$/.test(l))
+      .map((l) => l.replace(/^#+\s*/, '').replace(/\*\*/g, '')).join('\n').trim();
+    $('#updProg').hidden = true; $('#updBar').style.width = '0';
+    setUpdMsg('');
+    const go = $('#updGo'); go.disabled = upd.busy; go.textContent = '업데이트';
+    $('#updBack').hidden = false;
+  }
+  function hideUpdate() { $('#updBack').hidden = true; }
+  function setUpdMsg(m, err) { const e = $('#updMsg'); e.textContent = m; e.classList.toggle('err', !!err); }
+
+  $('#updLater').onclick = () => {
+    if (!upd.busy && upd.info) { const s = updState(); s.skip = upd.info.latest; s.skipAt = Date.now(); saveUpd(s); }
+    hideUpdate();
+  };
+  $('#updBack').addEventListener('click', (e) => { if (e.target.id === 'updBack') $('#updLater').onclick(); });
+  $('#updGo').onclick = () => {
+    if (upd.failed) { Android.openReleasePage(); return; }
+    upd.busy = true;
+    $('#updGo').disabled = true;
+    $('#updProg').hidden = false;
+    setUpdMsg('내려받는 중…');
+    Android.downloadUpdate();
+  };
+
+  window.onUpdateProgress = function (p) {
+    const go = $('#updGo');
+    if (p.error) {
+      upd.busy = false; upd.failed = true;
+      setUpdMsg(p.error, true);
+      go.disabled = false; go.textContent = '브라우저로 받기';
+      return;
+    }
+    if (p.needPermission) { setUpdMsg('설정 화면에서 「이 출처 허용」을 켠 뒤 뒤로 돌아오면 설치가 이어집니다.'); return; }
+    if (p.installing) {
+      upd.busy = false;
+      $('#updBar').style.width = '100%';
+      setUpdMsg('설치 화면에서 [업데이트]를 누르세요.');
+      go.disabled = false; go.textContent = '다시 설치';
+      return;
+    }
+    if (p.percent >= 0) {
+      $('#updBar').style.width = p.percent + '%';
+      setUpdMsg(`내려받는 중… ${p.percent}% (${(p.done / 1048576).toFixed(1)} / ${(p.total / 1048576).toFixed(1)}MB)`);
+    }
+  };
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
     if (b) { act(b.dataset.act); return; }
@@ -558,6 +644,7 @@
 
   /** 뒤로 가기: true 를 반환하면 앱 안에서 처리됨 */
   window.onBack = function () {
+    if (!$('#updBack').hidden) { hideUpdate(); return true; }
     if (!menu.hidden) { menu.hidden = true; return true; }
     if (!viewer.hidden && !state.fromOutside) { showHome(); return true; }
     return false;
@@ -580,4 +667,6 @@
   showHome();
   const pending = Android.getPending();
   if (pending) window.openDocument(JSON.parse(pending));
+  // 자동 업데이트 확인: 12시간에 한 번
+  if (Date.now() - (updState().lastCheck || 0) > DAY / 2) setTimeout(() => checkUpdate(false), 1500);
 })();

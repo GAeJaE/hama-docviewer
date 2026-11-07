@@ -27,13 +27,14 @@
     <button data-act="share">공유</button>
     <button data-act="other">다른 앱으로 열기</button>
     <button data-act="open">다른 파일 열기</button>
+    <button data-act="update">업데이트 확인</button>
   </div>
 
   <main id="home">
     <div class="hero">
-      <div class="logo">📄</div>
+      <img class="logo" src="hippo.svg" alt="">
       <h1>하마 문서뷰어</h1>
-      <p>한글·워드·엑셀·파워포인트·PDF 문서를 바로 열어 봅니다.<br>인터넷 연결 없이 기기 안에서만 처리됩니다.</p>
+      <p>한글·워드·엑셀·파워포인트·PDF 문서를 바로 열어 봅니다.<br>문서는 외부로 전송되지 않고 기기 안에서만 처리됩니다.</p>
       <button id="btnPick" class="primary">파일 열기</button>
     </div>
 
@@ -60,7 +61,26 @@
       <h2>최근 문서 <button id="btnClearRecent" class="link">지우기</button></h2>
       <ul id="recent"></ul>
     </section>
+
+    <footer class="ver">
+      <span id="verText">버전 -</span> · <button class="link" data-act="update">업데이트 확인</button>
+    </footer>
   </main>
+
+  <!-- 업데이트 안내 -->
+  <div id="updBack" hidden>
+    <div id="updBox" role="dialog" aria-modal="true">
+      <h3 id="updTitle">새 버전이 있습니다</h3>
+      <p id="updVer"></p>
+      <div id="updNotes"></div>
+      <div id="updProg" hidden><div id="updBar"></div></div>
+      <p id="updMsg"></p>
+      <div class="upd-btns">
+        <button class="secondary" id="updLater">나중에</button>
+        <button class="primary small" id="updGo">업데이트</button>
+      </div>
+    </div>
+  </div>
 
   <main id="viewer" hidden>
     <div id="doc"></div>
