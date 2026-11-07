@@ -9,6 +9,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.widget.LinearLayout
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -64,10 +69,8 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.parseColor("#1F4E79")
-
         webView = WebView(this)
-        setContentView(webView)
+        setContentView(buildLayout())
 
         webView.settings.apply {
             javaScriptEnabled = true
@@ -107,6 +110,50 @@ class MainActivity : Activity() {
 
         handleIntent(intent)
         webView.loadUrl("https://appassets.androidplatform.net/assets/web/index.html")
+    }
+
+    /**
+     * 상태바(시계)·내비게이션바 영역을 비워 두는 레이아웃.
+     * Android 15+ 는 앱이 시스템 바 뒤까지 그려지도록 강제(edge-to-edge)하므로,
+     * 시스템 바 크기만큼 위/아래 여백 뷰를 두고 앱 색으로 칠한다.
+     */
+    @Suppress("DEPRECATION")
+    private fun buildLayout(): View {
+        val topBar = View(this).apply { setBackgroundColor(COLOR_PRIMARY) }
+        val bottomBar = View(this).apply { setBackgroundColor(COLOR_BOTTOM) }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(COLOR_PRIMARY)
+            addView(topBar, LinearLayout.LayoutParams(MATCH_PARENT, 0))
+            addView(webView, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+            addView(bottomBar, LinearLayout.LayoutParams(MATCH_PARENT, 0))
+        }
+
+        if (Build.VERSION.SDK_INT >= 30) {
+            // 모든 버전에서 동일하게 edge-to-edge 로 그리고, 여백은 직접 계산
+            window.setDecorFitsSystemWindows(false)
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
+            window.insetsController?.setSystemBarsAppearance(
+                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS, // 아래쪽: 밝은 배경 + 어두운 아이콘
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS // 위쪽: 파란 배경 + 흰 아이콘
+            )
+            root.setOnApplyWindowInsetsListener { v, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                topBar.layoutParams = topBar.layoutParams.apply { height = bars.top }
+                bottomBar.layoutParams = bottomBar.layoutParams.apply { height = bars.bottom }
+                v.setPadding(bars.left, 0, bars.right, 0)
+                topBar.requestLayout()
+                WindowInsets.CONSUMED
+            }
+        } else {
+            // Android 10 이하: 시스템이 바 영역을 비워 주므로 색만 지정
+            window.statusBarColor = COLOR_PRIMARY
+            window.navigationBarColor = Color.BLACK
+        }
+        return root
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -275,5 +322,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_PICK = 1001
+        private val COLOR_PRIMARY = Color.parseColor("#1F4E79")
+        private val COLOR_BOTTOM = Color.parseColor("#F3F3F3")
     }
 }
