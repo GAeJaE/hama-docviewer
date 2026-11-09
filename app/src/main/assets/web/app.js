@@ -32,6 +32,7 @@
   }
 
   function resetViewer() {
+    if (window.DocNav) DocNav.reset();
     if (window.PdfNotes) PdfNotes.detach();
     $('#btnPen').hidden = true;
     state.cleanup.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } });
@@ -63,6 +64,7 @@
         state.kind = pre;
         if (!state.fromOutside) saveRecent(info, pre);
         await RENDER[pre](null, docEl, info);
+        DocNav.ready({ kind: pre });
         setStatus('');
         return;
       }
@@ -76,6 +78,7 @@
       const fn = RENDER[kind];
       if (!fn) throw Object.assign(new Error('지원하지 않는 파일 형식입니다.'), { unsupported: true });
       await fn(buf, docEl, info);
+      DocNav.ready({ kind, key: `${info.name || ''}|${buf.byteLength}` });
       setStatus('');
     } catch (e) {
       console.error(e);
@@ -452,6 +455,35 @@
       const had = PdfNotes.attach(holders, { key: `${info.name || 'pdf'}|${buf.byteLength}`, buf, name: info.name || '' });
       $('#btnPen').hidden = false;
       if (had) Android.toast('저장된 필기를 불러왔습니다. ✏️ 버튼으로 이어서 필기할 수 있습니다.');
+      // 글자 레이어: 길게 눌러 선택·복사, 검색 결과 표시에 사용
+      const textCache = [];
+      const pageItems = (i) => (textCache[i] = textCache[i] || holders[i]._page.getTextContent());
+      const textLayer = (i) => {
+        const div = holders[i];
+        if (!div._text) {
+          div._text = (async () => {
+            const layer = mk('div', 'textLayer');
+            // pdf.js 는 캔버스로 글자 폭을 재는데, 구형 WebView 캔버스는 기기 언어의 글꼴을 쓴다.
+            // 페이지의 lang="ko" 를 그대로 물려받으면 영문 글꼴이 달라져 검색 표시가 밀리므로 기기 언어로 맞춤.
+            layer.setAttribute('lang', navigator.language || 'en');
+            div.style.setProperty('--scale-factor', div._scale);
+            div.appendChild(layer);
+            const tl = new pdfjs.TextLayer({
+              textContentSource: await pageItems(i), container: layer,
+              viewport: div._page.getViewport({ scale: div._scale }),
+            });
+            await tl.render();
+            return layer;
+          })();
+        }
+        return div._text;
+      };
+      DocNav.setPdf({
+        numPages: holders.length,
+        holder: (i) => holders[i],
+        pageText: async (i) => (await pageItems(i)).items.map((it) => it.str || '').join(''),
+        textLayer,
+      });
       const renderPage = async (div) => {
         if (div._done) return;
         div._done = true;
@@ -461,6 +493,7 @@
         c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
         div.appendChild(c);
         await div._page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        textLayer(holders.indexOf(div)).catch((e) => console.warn('글자 레이어 실패', e));
       };
       const io = new IntersectionObserver((ents) => {
         ents.forEach((e) => { if (e.isIntersecting) renderPage(e.target); });
@@ -484,6 +517,7 @@
       if (c.style.position === 'absolute') { c.style.display = 'none'; continue; } // 자체 헤더·정보 창
       Object.assign(c.style, { padding: '0', overflow: 'visible' });
       for (const pg of c.children) {
+        pg.classList.add('hwpjs-page');
         pg.style.margin = '0 auto 12px';
         maxW = Math.max(maxW, pg.offsetWidth);
       }
@@ -508,6 +542,7 @@
       el.innerHTML = '';
       el.appendChild(sheetTable(wb.Sheets[names[i]]));
       viewer.scrollTo(0, 0);
+      if (window.DocNav) DocNav.refresh();
     };
     select(0);
   }
@@ -758,6 +793,12 @@
       case 'share': Android.share(); break;
       case 'other': Android.openWithOther(); break;
       case 'open': Android.pickFile(); break;
+      case 'print':
+        if (!state.info) break;
+        DocNav.closeSearch();
+        if (state.kind === 'pdf') PdfNotes.exportPdf('print');
+        else Android.printPage(state.info.name || '문서');
+        break;
       case 'update':
         if (upd.info && upd.info.newer) showUpdate(upd.info);
         else checkUpdate(true);
@@ -867,6 +908,7 @@
   /** 뒤로 가기: true 를 반환하면 앱 안에서 처리됨 */
   window.onBack = function () {
     if (!$('#updBack').hidden) { hideUpdate(); return true; }
+    if (window.DocNav && DocNav.back()) return true;
     if (window.PdfNotes && PdfNotes.isOn()) { PdfNotes.setOn(false); return true; }
     if (!menu.hidden) { menu.hidden = true; return true; }
     if (!viewer.hidden && state.parent) { window.openDocument(state.parent); return true; }

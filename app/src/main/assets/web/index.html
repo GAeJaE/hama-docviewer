@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>하마 문서뷰어</title>
+  <link rel="stylesheet" href="textlayer.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,6 +16,9 @@
     <button id="btnOpen" class="icon" aria-label="파일 열기">
       <svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/></svg>
     </button>
+    <button id="btnSearch" class="icon" aria-label="문서 안 검색" hidden>
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16a6.47 6.47 0 0 0 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    </button>
     <button id="btnPen" class="icon" aria-label="필기" hidden>
       <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
     </button>
@@ -23,10 +27,20 @@
     </button>
   </header>
 
+  <!-- 문서 안 검색 -->
+  <div id="searchBar" hidden>
+    <input id="searchInput" type="search" placeholder="문서에서 찾기" enterkeyhint="search" autocomplete="off">
+    <span id="searchCount"></span>
+    <button id="searchPrev" class="sb" aria-label="이전"><svg viewBox="0 0 24 24"><path d="M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
+    <button id="searchNext" class="sb" aria-label="다음"><svg viewBox="0 0 24 24"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
+    <button id="searchClose" class="sb" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+  </div>
+
   <div id="menu" hidden>
     <button data-act="zoomIn">확대</button>
     <button data-act="zoomOut">축소</button>
     <button data-act="fit">화면 너비에 맞춤</button>
+    <button data-act="print">인쇄 / PDF로 저장</button>
     <button data-act="share">공유</button>
     <button data-act="other">다른 앱으로 열기</button>
     <button data-act="open">다른 파일 열기</button>
@@ -113,6 +127,20 @@
     </div>
   </div>
 
+  <!-- 쪽 표시 / 이동 -->
+  <button id="pageInd" hidden aria-label="쪽 이동"><span id="pageIndText"></span></button>
+  <div id="pageJump" hidden>
+    <div class="pj-box">
+      <div class="pj-title">쪽 이동</div>
+      <div class="pj-row"><input id="pageJumpInput" type="number" inputmode="numeric" min="1"><span id="pageJumpTotal"></span></div>
+      <div class="pj-btns">
+        <button id="pageJumpFirst" class="secondary">처음</button>
+        <button id="pageJumpLast" class="secondary">끝</button>
+        <button id="pageJumpGo" class="primary small">이동</button>
+      </div>
+    </div>
+  </div>
+
   <div id="status" hidden></div>
   <nav id="sheetTabs" hidden></nav>
 
@@ -120,6 +148,7 @@
   <script src="legacy.js"></script>
   <script src="hwpx.js"></script>
   <script src="pdfnote.js"></script>
+  <script src="nav.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

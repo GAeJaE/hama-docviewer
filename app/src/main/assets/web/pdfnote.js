@@ -294,13 +294,14 @@
   }
 
   async function exportPdf(mode) {
-    if (!hasNotes()) { toast('필기한 내용이 없습니다.'); return; }
+    const notes = hasNotes();
+    if (!notes && mode !== 'print') { toast('필기한 내용이 없습니다.'); return; }
     if (!window.Android || !Android.exportBegin) { toast('이 환경에서는 저장할 수 없습니다.'); return; }
-    toast('필기를 넣은 PDF를 만드는 중…');
+    if (notes) toast('필기를 넣은 PDF를 만드는 중…');
     try {
-      const bytes = await buildPdf();
+      const bytes = notes ? await buildPdf() : new Uint8Array(N.buf);
       const base = (N.name || '문서').replace(/\.pdf$/i, '');
-      Android.exportBegin(`${base}_필기.pdf`);
+      Android.exportBegin(notes ? `${base}_필기.pdf` : `${base}.pdf`);
       const CHUNK = 768 * 1024; // 3의 배수 → base64 조각이 깨지지 않음
       for (let i = 0; i < bytes.length; i += CHUNK) {
         let bin = '';

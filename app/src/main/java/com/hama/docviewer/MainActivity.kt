@@ -288,6 +288,35 @@ class MainActivity : Activity() {
         return input
     }
 
+    /** 이미 만들어진 PDF 파일을 그대로 인쇄/저장하는 어댑터 */
+    private class PdfFilePrintAdapter(private val file: java.io.File, private val name: String) :
+        android.print.PrintDocumentAdapter() {
+        override fun onLayout(
+            oldAttributes: android.print.PrintAttributes?, newAttributes: android.print.PrintAttributes,
+            cancellationSignal: android.os.CancellationSignal?, callback: LayoutResultCallback, extras: Bundle?
+        ) {
+            if (cancellationSignal?.isCanceled == true) { callback.onLayoutCancelled(); return }
+            val info = android.print.PrintDocumentInfo.Builder(name)
+                .setContentType(android.print.PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                .build()
+            callback.onLayoutFinished(info, oldAttributes != newAttributes)
+        }
+
+        override fun onWrite(
+            pages: Array<out android.print.PageRange>?, destination: android.os.ParcelFileDescriptor,
+            cancellationSignal: android.os.CancellationSignal?, callback: WriteResultCallback
+        ) {
+            try {
+                file.inputStream().use { input ->
+                    java.io.FileOutputStream(destination.fileDescriptor).use { input.copyTo(it) }
+                }
+                callback.onWriteFinished(arrayOf(android.print.PageRange.ALL_PAGES))
+            } catch (e: Exception) {
+                callback.onWriteFailed(e.message)
+            }
+        }
+    }
+
     private class LimitedInputStream(private val inner: java.io.InputStream, private var left: Long) : java.io.InputStream() {
         override fun read(): Int {
             if (left <= 0) return -1
@@ -485,9 +514,28 @@ class MainActivity : Activity() {
             exportFile?.appendBytes(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
         }
 
+        /** HWP·엑셀 등 화면에 그린 문서를 인쇄 / PDF로 저장 */
+        @JavascriptInterface
+        fun printPage(jobName: String) = runOnUiThread {
+            val pm = getSystemService(PRINT_SERVICE) as android.print.PrintManager
+            val name = jobName.substringBeforeLast('.').ifBlank { "문서" }
+            // 한글·워드 문서는 대부분 A4 기준이라 기본 용지를 A4로 (인쇄 화면에서 바꿀 수 있음)
+            val attrs = android.print.PrintAttributes.Builder()
+                .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
+                .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                .build()
+            pm.print(name, webView.createPrintDocumentAdapter(name), attrs)
+        }
+
         @JavascriptInterface
         fun exportFinish(mode: String) = runOnUiThread {
             val f = exportFile ?: return@runOnUiThread
+            if (mode == "print") {
+                // PDF 는 원본(또는 필기 포함본) 그대로 인쇄 프레임워크에 넘김
+                val pm = getSystemService(PRINT_SERVICE) as android.print.PrintManager
+                pm.print(exportName.substringBeforeLast('.'), PdfFilePrintAdapter(f, exportName), null)
+                return@runOnUiThread
+            }
             if (mode == "share") {
                 val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", f)
                 val send = Intent(Intent.ACTION_SEND).apply {

@@ -5,14 +5,25 @@ HWP·HWPX·Word·Excel·PowerPoint·PDF 문서를 **파일을 눌러서 바로 �
 
 ## 설치
 
-`dist/HamaDocViewer-1.3.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
+`dist/HamaDocViewer-1.4.apk` 를 휴대폰에 복사해 설치하거나, USB 디버깅이 켜진 상태에서:
 
 ```bash
-adb install -r dist/HamaDocViewer-1.3.apk
+adb install -r dist/HamaDocViewer-1.4.apk
 ```
 
 설치 후 파일 관리자(내 파일)·카카오톡·메일에서 문서를 누르고 **하마 문서뷰어 → 항상**을 고르면,
 다음부터는 탭 한 번으로 열립니다. 앱을 직접 실행해 [파일 열기]로 불러올 수도 있습니다.
+
+## 찾기 · 쪽 이동 · 인쇄 (v1.4+)
+
+- **문서 안 검색** (🔍): 모든 문서 형식에서 단어를 찾아 노란색으로 표시하고, ∧ ∨ 버튼이나 Enter로 다음 결과로 이동합니다.
+  PDF는 글자 레이어를 만들어 정확한 위치에 표시합니다. 엑셀은 현재 시트에서 찾습니다.
+- **PDF 글자 선택·복사**: PDF 글자를 길게 누르면 선택되어 복사·공유할 수 있습니다.
+- **쪽 표시·이동**: 오른쪽 아래 「3 / 14」를 누르면 쪽 번호로 이동(처음/끝 버튼 포함).
+- **이어 보기**: 문서마다 마지막으로 보던 위치를 기억해 다시 열면 그곳부터 보여 줍니다.
+- **인쇄 / PDF로 저장** (⋮ 메뉴): 한글·워드·엑셀 등 모든 문서를 안드로이드 인쇄 화면으로 보냅니다.
+  프린터를 고르면 인쇄, 「PDF로 저장」을 고르면 PDF 파일로 바뀝니다(기본 용지 A4).
+  PDF는 원본 그대로(필기가 있으면 필기 포함본) 인쇄됩니다.
 
 ## PDF 필기 (v1.3+)
 
@@ -36,7 +47,7 @@ PDF를 열고 상단 ✏️ 버튼을 누르면 필기 모드가 됩니다. 태�
 1. `app/build.gradle.kts` 의 `versionCode` 를 올리고 `versionName` 을 바꿉니다 (예: 1.3).
 2. `./gradlew assembleDebug` 로 빌드합니다. 같은 PC의 디버그 키로 서명해야 기존 앱 위에 덮어 설치됩니다.
 3. 태그 `v<versionName>` 으로 GitHub 릴리스를 만들고 APK를 첨부합니다:
-   `gh release create v1.3 dist/HamaDocViewer-1.3.apk --title "하마 문서뷰어 v1.3" --notes "변경 내용"`
+   `gh release create v1.3 dist/HamaDocViewer-1.4.apk --title "하마 문서뷰어 v1.3" --notes "변경 내용"`
 
 ## 지원 형식
 
@@ -68,6 +79,7 @@ app/src/main/java/com/hama/docviewer/MainActivity.kt  # 인텐트 수신, WebVie
 app/src/main/java/com/hama/docviewer/Updater.kt       # GitHub 릴리스 확인, APK 다운로드·설치
 app/src/main/AndroidManifest.xml                      # 파일 형식별 intent-filter (탭해서 열기)
 app/src/main/assets/web/                              # 뷰어 화면 (HTML/JS)
+  ├─ nav.js      문서 안 검색, 쪽 표시·이동, 마지막 위치 기억
   ├─ pdfnote.js  PDF 필기 레이어 (펜/형광펜/지우개, 자동 저장, pdf-lib 내보내기)
   ├─ app.js      형식 판별(확장자 + 파일 시그니처), 렌더러 선택, 확대/축소, 최근 문서
   ├─ hwpx.js     HWPX 렌더러

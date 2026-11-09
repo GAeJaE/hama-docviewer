@@ -249,3 +249,61 @@ body.note-on.pen-only .ink-live { touch-action: pan-x pan-y; } /* 손가락은 �
 #noteBar .nb-color.on::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; border: 2px solid #1d4ed8; }
 #noteBar .nb-size i { display: block; border-radius: 50%; background: #344054; }
 @media (min-width: 1000px) { #noteBar { flex-direction: row; gap: 6px; } #noteBar .nb-row + .nb-row { border-left: 1px solid #e4e7ec; padding-left: 6px; } }
+
+/* ---------------- 검색 ---------------- */
+#searchBar {
+  flex: none; display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 10px;
+  background: #fff; border-bottom: 1px solid var(--line); z-index: 9;
+}
+#searchInput {
+  flex: 1; min-width: 0; height: 38px; border: 1px solid var(--line); border-radius: 19px; padding: 0 14px;
+  font-size: 15px; background: #f5f7fa; outline: none;
+}
+#searchInput:focus { border-color: var(--primary-2); background: #fff; }
+#searchCount { flex: none; min-width: 46px; text-align: center; font-size: 13px; color: var(--muted); }
+#searchBar .sb { flex: none; width: 40px; height: 40px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; }
+#searchBar .sb:active { background: #eef2f7; }
+#searchBar .sb svg { width: 24px; height: 24px; fill: #475467; }
+#searchBar .sb:disabled svg { fill: #c4c9d2; }
+mark.hit { background: rgba(255, 213, 0, .55); color: inherit; border-radius: 2px; padding: 0; }
+mark.hit.cur { background: rgba(255, 128, 0, .8); box-shadow: 0 0 0 2px rgba(255, 128, 0, .8); }
+.textLayer mark.hit { color: transparent; }
+
+/* PDF 글자 레이어는 그림 위, 필기 아래 */
+.pdf-page .textLayer { z-index: 1; }
+.pdf-page .ink-layer { z-index: 2; }
+.pdf-page .ink-live { z-index: 3; }
+
+/* ---------------- 쪽 표시 / 이동 ---------------- */
+#pageInd {
+  position: fixed; right: 14px; bottom: 18px; z-index: 12; border: 0;
+  background: rgba(30, 36, 48, .78); color: #fff; font-size: 14px; font-weight: 600;
+  padding: 9px 14px; border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+#pageInd:active { background: rgba(30, 36, 48, .95); }
+body.note-on #pageInd { bottom: 150px; }
+#pageJump { position: fixed; inset: 0; z-index: 28; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; }
+#pageJump .pj-box { background: #fff; border-radius: 16px; padding: 18px; width: min(320px, 88vw); box-shadow: 0 8px 28px rgba(0,0,0,.25); }
+#pageJump .pj-title { font-weight: 700; font-size: 16px; margin-bottom: 12px; color: var(--primary); }
+#pageJump .pj-row { display: flex; align-items: center; gap: 8px; }
+#pageJumpInput { flex: 1; height: 44px; font-size: 20px; text-align: center; border: 1px solid var(--line); border-radius: 10px; }
+#pageJumpTotal { font-size: 16px; color: var(--muted); }
+#pageJump .pj-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+#pageJump .pj-btns .secondary { padding: 8px 14px; }
+
+/* ---------------- 인쇄 / PDF로 저장 ---------------- */
+@media print {
+  @page { margin: 0; }
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body { display: block !important; }
+  #bar, #menu, #searchBar, #sheetTabs, #noteBar, #status, #pageInd, #pageJump, #updBack, #home, .notice { display: none !important; }
+  #viewer { overflow: visible !important; background: #fff !important; display: block !important; }
+  #doc { zoom: 1 !important; transform: none !important; padding: 0 !important; }
+  .page, .pdf-page, .slide-card, .docx-wrapper > section, .hwpjs-page, .pptx-preview-slide-wrapper {
+    box-shadow: none !important; margin: 0 auto !important; break-after: page; break-inside: avoid;
+  }
+  .hwp-host *, .docx-host * { box-shadow: none !important; }
+  .text-page, .md-page { break-inside: auto; break-after: auto; }
+  mark.hit { background: none !important; box-shadow: none !important; }
+  table.sheet th { position: static !important; }
+}
